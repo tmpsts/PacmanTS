@@ -1,5 +1,6 @@
 import Buttons from "./game/Buttons";
 import GameBoard from "./game/GameBoard";
+import KeyboardControls from "./game/KeyboardControls";
 
 export default function App() {
   return (
@@ -7,6 +8,7 @@ export default function App() {
       <h1 className="text-7xl font-bold tracking-tight">Pacman</h1>
 
       <GameBoard />
+      <KeyboardControls />
 
       <div>
         <Buttons />

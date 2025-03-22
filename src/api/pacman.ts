@@ -10,6 +10,7 @@ import {
 const store = getDefaultStore();
 
 let currentDirecton = "right";
+let loopNumber = 0;
 
 const startGame = async () => {
   console.log("Game started");
@@ -28,10 +29,13 @@ function endGame() {
 async function gameLoop(skip = false) {
   const gameState = store.get(gameStateAtom);
   const player = store.get(playerLocationAtom);
-  console.log("Game loop running", gameState, player);
+
+  loopNumber++;
+  console.log("Game loop running", loopNumber, gameState, player);
 
   if (gameState != "running" && !skip) {
     console.log("Game ended");
+    loopNumber = 0;
     return "Game ended.";
   }
 
@@ -75,30 +79,71 @@ async function gameLoop(skip = false) {
 }
 
 async function movePlayer(dir: "up" | "down" | "left" | "right") {
-  // switch statement to set the current direction
-  if (!shouldMove(dir)) {
-    console.log("Player can't move yet");
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  const gameState = store.get(gameStateAtom);
+  if (gameState !== "running") {
+    console.log("Game is not running");
+    return "Game is not running";
   }
 
+  // Buffer so that the user gets a slightly longer time to react
+  // Checks if you can move a certain direction in the next game loop
+
+  const player = store.get(playerLocationAtom);
+
   if (shouldMove(dir)) {
-    console.log("Player moving", dir);
-    switch (dir) {
+    console.log("Direction change valid immediately:", dir);
+    currentDirecton = dir;
+    return `Changed direction to ${dir}`;
+  }
+  if (
+    ((currentDirecton === "up" || currentDirecton === "down") &&
+      (dir === "left" || dir === "right")) ||
+    ((currentDirecton === "left" || currentDirecton === "right") &&
+      (dir === "up" || dir === "down"))
+  ) {
+    let nextPos = { ...player };
+    switch (currentDirecton) {
       case "up":
-        currentDirecton = "up";
+        nextPos.y -= 1;
         break;
       case "down":
-        currentDirecton = "down";
+        nextPos.y += 1;
         break;
       case "left":
-        currentDirecton = "left";
+        nextPos.x -= 1;
         break;
       case "right":
-        currentDirecton = "right";
+        nextPos.x += 1;
         break;
     }
-    return "Player now moving " + dir;
+    if (
+      !isPlayerWall({
+        x:
+          dir === "left"
+            ? nextPos.x - 1
+            : dir === "right"
+            ? nextPos.x + 1
+            : nextPos.x,
+        y:
+          dir === "up"
+            ? nextPos.y - 1
+            : dir === "down"
+            ? nextPos.y + 1
+            : nextPos.y,
+      })
+    ) {
+      console.log("Queuing direction for next frame:", dir);
+      setTimeout(() => {
+        if (store.get(gameStateAtom) === "running") {
+          currentDirecton = dir;
+          console.log("Direction changed:", dir);
+        }
+      }, 250);
+      return `Queued ${dir} for next frame`;
+    }
   }
+
+  return "Cannot change direction to " + dir;
 }
 
 function isPlayerDead() {
